@@ -7,6 +7,7 @@ import integration.payu.payment_service.gateway.PayUGatewayClient;
 import integration.payu.payment_service.repository.PaymentRepository;
 import integration.payu.payment_service.util.HashGenerator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -17,12 +18,14 @@ import java.time.Instant;
 import java.util.Map;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class PaymentService {
 
     private final PayUGatewayClient gatewayClient;
     private final HashGenerator hashGenerator;
     private final PaymentRepository paymentRepository;
+    private final PaymentFormBuilder paymentFormBuilder;
 
     @Value("${payu.merchantKey}")
     private String merchantKey;
@@ -47,32 +50,13 @@ public class PaymentService {
         Map<String, String> requestData =
                 gatewayClient.buildRequestMap(request, merchantKey, hash);
         
-        System.out.println("request data"+requestData);
+        log.debug("Prepared payment request data for txnId {}", request.getTxnid());
 
         return requestData;
     }
-    
+
     public String createPayUForm(Map<String, String> requestData) {
-
-        StringBuilder html = new StringBuilder();
-
-        html.append("<html>");
-        html.append("<body onload='document.forms[0].submit()'>");
-        html.append("<form action='https://test.payu.in/_payment' method='post'>");
-
-        requestData.forEach((key, value) -> {
-            html.append("<input type='hidden' name='")
-                .append(key)
-                .append("' value='")
-                .append(value)
-                .append("'/>");
-        });
-
-        html.append("</form>");
-        html.append("</body>");
-        html.append("</html>");
-
-        return html.toString();
+        return paymentFormBuilder.build(requestData);
     }
 
 }
